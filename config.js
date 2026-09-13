@@ -32,7 +32,7 @@ window.MAI_CONFIG = {
    * Token 权限只要 fine-grained 的 Contents: Read and write，范围限本仓库。
    * ------------------------------------------------------------------ */
   tokenBlob: 'MAI1.250000.pwsycuPK4KLNlsB/eh0Ojw==.o8qxjT81xkJ6R0un.PHeo7uQP04k+XqmY9ycqa8T24+Wnzd/ZetAUqvBBaG1RcIOaObLUaTfVvcC0bU7+Nc4AfwaE5IS/Bm1n+w7n296DVz5fSHiul+h2U44mSEzQlausLBWMh40JCUhTumtsIsEP1rdEsaGAUf1QCQ==',
-  passphrase: 'eG7L-hu9y-bx6Q-fgGd-PWWU',
+  passphrase: '100%Security',
 
   /* 写入方式
    *  'blob'  —— 默认。浏览器用 tokenBlob + passphrase 解出 Token，直接调 GitHub API 提交。
