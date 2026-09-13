@@ -1,0 +1,250 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="color-scheme" content="dark">
+<title>舞萌DX 点歌 · 凭据加密器</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Ctext y='26' font-size='26'%3E%F0%9F%94%90%3C/text%3E%3C/svg%3E">
+<link rel="stylesheet" href="style.css">
+<style>
+  .tool-input {
+    width: 100%;
+    padding: 12px;
+    border: 1px solid var(--line);
+    border-radius: 10px;
+    background: #10131c;
+    color: var(--text);
+    font: inherit;
+    font-size: 15px;
+    outline: none;
+  }
+  .tool-input:focus { border-color: var(--accent); }
+  textarea.tool-input { min-height: 120px; resize: vertical; word-break: break-all; font-family: ui-monospace, Consolas, monospace; font-size: 12.5px; line-height: 1.6; }
+  .field > span { font-size: 13px; color: var(--text-dim); }
+  .row-2 { display: flex; gap: 8px; align-items: stretch; }
+  .row-2 .tool-input { flex: 1; }
+  .strength { font-size: 12px; }
+  .strength.weak { color: var(--danger); }
+  .strength.ok { color: #ffd166; }
+  .strength.good { color: var(--ok); }
+  ol.steps { margin: 0; padding-left: 20px; font-size: 13.5px; color: var(--text-dim); }
+  ol.steps li { margin-bottom: 6px; }
+  ol.steps code { color: var(--text); }
+</style>
+</head>
+<body>
+<div class="app">
+
+  <header class="app-header">
+    <div class="brand">
+      <h1>凭据加密器</h1>
+      <p class="brand-sub">把 GitHub Token 加密成一行密文，供点歌页使用</p>
+    </div>
+    <div class="header-side">
+      <span class="chip" id="chip-config">检查 config.js…</span>
+      <a class="icon-btn" href="index.html" title="回到点歌页" aria-label="回到点歌页">←</a>
+    </div>
+  </header>
+
+  <div class="banner" id="crypto-warn" hidden></div>
+
+  <main class="panel">
+
+    <section class="block">
+      <h2 class="block-title">1 · 填入 Token 与口令</h2>
+      <div class="field">
+        <span>GitHub Token（fine-grained，只需本仓库的 Contents: Read and write）</span>
+        <input type="password" id="input-token" class="tool-input" autocomplete="off" spellcheck="false" placeholder="github_pat_… 或 ghp_…">
+      </div>
+      <div class="field" style="margin-top:12px">
+        <span>加密口令（解密时要用同一个；口令越随机越好）</span>
+        <div class="row-2">
+          <input type="text" id="input-pass" class="tool-input" autocomplete="off" spellcheck="false" placeholder="例如 12 位以上随机字符">
+          <button type="button" class="btn ghost" id="btn-gen">🎲 随机</button>
+        </div>
+        <span class="strength" id="strength"></span>
+      </div>
+    </section>
+
+    <section class="block">
+      <h2 class="block-title">2 · 生成密文</h2>
+      <div class="actions">
+        <button type="button" class="btn primary" id="btn-encrypt">加密</button>
+        <button type="button" class="btn ghost" id="btn-verify" disabled>验证密文能解回 Token</button>
+      </div>
+      <div class="field" style="margin-top:12px">
+        <span>密文（一行）</span>
+        <textarea id="output" class="tool-input" readonly placeholder="点上面的「加密」后出现在这里"></textarea>
+      </div>
+      <div class="actions" style="margin-top:12px">
+        <button type="button" class="btn ghost" id="btn-copy-blob" disabled>复制密文</button>
+        <button type="button" class="btn ghost" id="btn-copy-config" disabled>复制 config.js 片段</button>
+        <button type="button" class="btn ghost" id="btn-clear">清空</button>
+      </div>
+      <p class="hint" id="tool-status"></p>
+    </section>
+
+    <section class="block">
+      <h2 class="block-title">3 · 怎么用</h2>
+      <ol class="steps">
+        <li>把复制到的 <code>tokenBlob</code> 与 <code>passphrase</code> 两行粘进 <code>config.js</code>。</li>
+        <li>把 <code>tokenBlob</code> 填好后，点歌页就能直接提交；口令留空则每次打开点歌页需要手动输一次口令（存当前标签页）。</li>
+        <li>想核对密文有没有写错：本页「验证密文能解回 Token」，或命令行 <code>node decrypt.mjs "密文" "口令"</code>。</li>
+        <li>Token 泄露了就先去 GitHub 吊销，再用本页重新生成一份密文替换掉。</li>
+      </ol>
+      <p class="hint warn">
+        ⚠ 说明：点歌页是纯静态网页，既然它自己能解出 Token，那么拿到网页的人也就能解出来。
+        加密的实际作用是：避免 Token 明文出现在仓库里（GitHub 的密钥扫描会自动吊销明文 Token）、挡住随手翻源码的人。
+        要做到「谁也拿不到」，只能用服务端代提交（config.js 里的 <code>submitMode: 'proxy'</code>）。
+      </p>
+    </section>
+
+    <p class="hint">本页的所有计算都在你自己的浏览器里完成，不会把 Token 发往任何服务器（断网也能用）。</p>
+  </main>
+
+  <footer class="app-footer">
+    <span>算法：PBKDF2-SHA256（25 万次迭代）→ AES-256-GCM</span>
+    <span>密文格式：<code>MAI1.&lt;迭代次数&gt;.&lt;salt&gt;.&lt;iv&gt;.&lt;密文&gt;</code></span>
+  </footer>
+</div>
+
+<div class="toast" id="toast" role="status" aria-live="polite" hidden></div>
+
+<script src="crypto.js"></script>
+<script src="config.js"></script>
+<script>
+(function () {
+  'use strict';
+
+  var $ = function (id) { return document.getElementById(id); };
+  var CFG = window.MAI_CONFIG || {};
+  var blob = '';
+
+  var toastTimer = null;
+  function toast(message, kind) {
+    var node = $('toast');
+    node.textContent = message;
+    node.className = 'toast' + (kind ? ' ' + kind : '');
+    node.hidden = false;
+    clearTimeout(toastTimer);
+    toastTimer = setTimeout(function () { node.hidden = true; }, 4000);
+  }
+
+  function setStatus(text, kind) {
+    $('tool-status').textContent = text || '';
+    $('tool-status').className = 'hint' + (kind ? ' ' + kind : '');
+  }
+
+  function copy(text, what) {
+    var done = function () { toast('已复制' + what, 'ok'); };
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+      navigator.clipboard.writeText(text).then(done, function () { window.prompt('手动复制：', text); });
+    } else {
+      window.prompt('手动复制：', text);
+    }
+  }
+
+  function configSnippet() {
+    var pass = $('input-pass').value;
+    return "  tokenBlob: '" + blob + "',\n  passphrase: '" + pass.replace(/'/g, "\\'") + "',";
+  }
+
+  function randomPassphrase() {
+    var alphabet = 'abcdefghijkmnopqrstuvwxyzABCDEFGHJKLMNPQRSTUVWXYZ23456789';
+    var bytes = crypto.getRandomValues(new Uint8Array(20));
+    var out = '';
+    for (var i = 0; i < bytes.length; i++) out += alphabet[bytes[i] % alphabet.length];
+    return out.slice(0, 16).replace(/(.{4})(?=.)/g, '$1-');
+  }
+
+  function refreshStrength() {
+    var hint = window.MaiCrypto.passphraseHint($('input-pass').value);
+    var node = $('strength');
+    node.textContent = $('input-pass').value ? hint.text : '';
+    node.className = 'strength ' + hint.level;
+  }
+
+  function updateButtons() {
+    var ready = !!blob;
+    $('btn-verify').disabled = !ready;
+    $('btn-copy-blob').disabled = !ready;
+    $('btn-copy-config').disabled = !ready;
+  }
+
+  function init() {
+    if (typeof crypto === 'undefined' || !crypto.subtle) {
+      $('crypto-warn').textContent = '当前浏览器/协议不支持 WebCrypto，无法加密。请用 https 或 http://localhost 打开本页（Chrome、Edge、Firefox 的新版本都可以）。';
+      $('crypto-warn').className = 'banner bad';
+      $('crypto-warn').hidden = false;
+      $('btn-encrypt').disabled = true;
+    }
+
+    var configured = !!CFG.tokenBlob;
+    $('chip-config').textContent = configured ? 'config.js 已有密文' : 'config.js 暂无密文';
+    $('chip-config').className = 'chip' + (configured ? ' ok' : ' paused');
+
+    $('btn-gen').addEventListener('click', function () {
+      $('input-pass').value = randomPassphrase();
+      refreshStrength();
+    });
+    $('input-pass').addEventListener('input', refreshStrength);
+
+    $('btn-encrypt').addEventListener('click', function () {
+      var token = $('input-token').value.trim();
+      var pass = $('input-pass').value;
+      if (!token) { toast('先填 Token', 'bad'); $('input-token').focus(); return; }
+      if (!pass) { toast('先填一个口令', 'bad'); $('input-pass').focus(); return; }
+      setStatus('正在加密…');
+      window.MaiCrypto.encrypt(token, pass).then(function (result) {
+        blob = result;
+        $('output').value = result;
+        updateButtons();
+        setStatus('加密完成，长度 ' + result.length + ' 字符。复制下面两行到 config.js。', '');
+        toast('加密成功', 'ok');
+      }).catch(function (err) {
+        setStatus('加密失败：' + err.message, 'bad');
+      });
+    });
+
+    $('btn-verify').addEventListener('click', function () {
+      var pass = $('input-pass').value;
+      if (!blob) return;
+      setStatus('正在验证…');
+      window.MaiCrypto.decrypt(blob, pass).then(function (plain) {
+        var same = plain === $('input-token').value.trim();
+        setStatus(same ? '✅ 验证通过：密文能用当前口令解回同一个 Token。' : '⚠ 能解开，但解出的内容和输入框里的 Token 不一致（可能你改过输入框）。',
+          same ? '' : 'warn');
+      }).catch(function (err) {
+        setStatus('❌ ' + err.message, 'bad');
+      });
+    });
+
+    $('btn-copy-blob').addEventListener('click', function () { copy(blob, '密文'); });
+    $('btn-copy-config').addEventListener('click', function () { copy(configSnippet(), 'config.js 片段'); });
+    $('btn-clear').addEventListener('click', function () {
+      blob = '';
+      $('input-token').value = '';
+      $('output').value = '';
+      updateButtons();
+      setStatus('');
+    });
+
+    // 生成后改了口令，就要求重新加密，避免复制到对不上的口令
+    $('input-pass').addEventListener('input', function () {
+      if (blob) { blob = ''; $('output').value = ''; updateButtons(); setStatus('口令改了，请重新点「加密」。', 'warn'); }
+    });
+    $('input-token').addEventListener('input', function () {
+      if (blob) { blob = ''; $('output').value = ''; updateButtons(); setStatus('Token 改了，请重新点「加密」。', 'warn'); }
+    });
+
+    refreshStrength();
+    updateButtons();
+  }
+
+  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', init);
+  else init();
+})();
+</script>
+</body>
+</html>

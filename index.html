@@ -1,0 +1,102 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="color-scheme" content="dark">
+<meta name="description" content="舞萌DX 点歌页：选难度、搜曲目（含中文别名）、一键把点歌写进仓库。">
+<title>舞萌DX - 点歌</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Ctext y='26' font-size='26'%3E%F0%9F%8E%B5%3C/text%3E%3C/svg%3E">
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<div class="app">
+
+  <header class="app-header">
+    <div class="brand">
+      <h1>舞萌DX 点歌</h1>
+      <p class="brand-sub" id="repo-label">…</p>
+    </div>
+    <div class="header-side">
+      <span class="chip" id="chip-state">状态检查中…</span>
+      <span class="chip" id="chip-queue">队列 —</span>
+      <button type="button" class="icon-btn" id="btn-settings" title="设置" aria-label="设置">⚙</button>
+    </div>
+  </header>
+
+  <div class="banner" id="banner" hidden></div>
+
+  <main class="panel">
+
+    <section class="block">
+      <h2 class="block-title">1 · 选择难度</h2>
+      <div class="diffs" id="diffs" role="radiogroup" aria-label="难度"></div>
+      <div class="notice" id="notice" role="alert" hidden></div>
+    </section>
+
+    <section class="block">
+      <h2 class="block-title">2 · 搜索曲目</h2>
+      <div class="search">
+        <span class="search-icon" aria-hidden="true">🔍</span>
+        <input id="search" type="search" autocomplete="off" autocapitalize="off"
+               spellcheck="false" enterkeyhint="search"
+               placeholder="曲名 / 中文别名 / 曲师，例如「真爱」"
+               aria-label="搜索曲目" aria-controls="results" aria-expanded="false">
+        <button type="button" class="icon-btn" id="btn-clear" aria-label="清空搜索" hidden>✕</button>
+      </div>
+      <p class="hint" id="lib-status">正在载入曲库…</p>
+      <div class="recent" id="recent" hidden></div>
+      <ul class="results" id="results" role="listbox" aria-label="搜索结果" hidden></ul>
+    </section>
+
+    <section class="block" id="card-block" hidden>
+      <h2 class="block-title">3 · 确认曲目</h2>
+      <article class="song-card" id="card"></article>
+    </section>
+
+    <section class="block actions">
+      <button type="button" class="btn primary" id="btn-submit" disabled>点这首歌</button>
+      <button type="button" class="btn ghost" id="btn-manual" hidden></button>
+      <button type="button" class="btn ghost" id="btn-copy" disabled>复制点歌文本</button>
+    </section>
+
+    <p class="hint warn" id="submit-hint" hidden></p>
+
+    <section class="block" id="board-block">
+      <h2 class="block-title" id="board-title">点歌榜</h2>
+      <ol class="board" id="board"></ol>
+      <p class="hint" id="board-hint"></p>
+    </section>
+  </main>
+
+  <footer class="app-footer">
+    <span>曲库数据来自 <a href="https://maimai.lxns.net" target="_blank" rel="noopener noreferrer">落雪咖啡屋 maimai DX 查分器</a></span>
+    <span>点歌结果写入本仓库的 <code id="footer-path">posts.txt</code></span>
+  </footer>
+</div>
+
+<dialog id="dlg-settings" class="dlg" aria-labelledby="dlg-title">
+  <div class="dlg-body">
+    <h3 id="dlg-title">设置</h3>
+    <dl class="kv" id="dlg-info"></dl>
+    <label class="field" id="field-pass" hidden>
+      <span>解锁口令</span>
+      <input type="password" id="input-pass" autocomplete="off" spellcheck="false" placeholder="加密时设置的口令">
+      <small>只用在本机把 config.js 里的密文解成提交凭据，不会发往任何地方；只保存在当前标签页，关掉就没了。</small>
+    </label>
+    <p class="hint" id="dlg-hint"></p>
+    <div class="dlg-actions">
+      <button type="button" class="btn ghost" id="btn-verify-cred">验证凭据</button>
+      <button type="button" class="btn ghost" id="btn-close-dlg">关闭</button>
+      <button type="button" class="btn primary" id="btn-save-pass">解锁</button>
+    </div>
+  </div>
+</dialog>
+
+<div class="toast" id="toast" role="status" aria-live="polite" hidden></div>
+
+<script src="crypto.js"></script>
+<script src="config.js"></script>
+<script src="app.js"></script>
+</body>
+</html>
